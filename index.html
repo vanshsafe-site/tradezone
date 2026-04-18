@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeZone — Expert Markets</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0d1526;
+    --surface2: #111d35;
+    --border: rgba(255,255,255,0.07);
+    --gold: #c9a84c;
+    --gold-light: #e8c97e;
+    --gold-dim: rgba(201,168,76,0.15);
+    --green: #00d88a;
+    --green-dim: rgba(0,216,138,0.12);
+    --red: #ff4d6d;
+    --text: #e8ecf4;
+    --text-muted: #7a8ba8;
+    --text-dim: #3d4f6e;
+    --user-bubble: #1a3a6e;
+    --expert-bubble: #121e35;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ─── BACKGROUND GRAIN + MESH ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 85% 90%, rgba(0,100,255,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0,50,120,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── SCREENS ─── */
+  .screen {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .screen.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ──────────────────────────────────────
+     HOME SCREEN
+  ────────────────────────────────────── */
+  #home {
+    justify-content: center;
+    align-items: center;
+    padding: 40px 24px;
+  }
+
+  /* Ticker tape */
+  .ticker-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    overflow: hidden;
+    height: 36px;
+    background: rgba(13,21,38,0.9);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    z-index: 10;
+  }
+  .ticker-track {
+    display: flex;
+    gap: 48px;
+    white-space: nowrap;
+    animation: ticker 30s linear infinite;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .ticker-item { display: flex; gap: 8px; }
+  .ticker-item .sym { color: var(--text-muted); letter-spacing: 0.05em; }
+  .ticker-item .price { color: var(--text); }
+  .ticker-item .chg.up { color: var(--green); }
+  .ticker-item .chg.dn { color: var(--red); }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Nav bar */
+  .nav {
+    position: fixed;
+    top: 36px; left: 0; right: 0;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 9;
+    background: linear-gradient(to bottom, rgba(8,12,20,0.9), transparent);
+  }
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+  .nav-logo span { color: var(--text); }
+  .nav-pill {
+    display: flex;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    align-items: center;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse-dot 1.5s ease infinite;
+    box-shadow: 0 0 0 0 rgba(0,216,138,0.4);
+  }
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,216,138,0.4); }
+    50% { box-shadow: 0 0 0 5px rgba(0,216,138,0); }
+  }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    max-width: 680px;
+    margin-top: 60px;
+    animation: fadeUp 0.8s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gold-dim);
+    border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold-light);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(42px, 7vw, 76px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 30%, var(--gold-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 17px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    max-width: 460px;
+    margin: 0 auto 40px;
+    font-weight: 300;
+  }
+
+  /* CTA Button */
+  .btn-connect {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 36px;
+    background: linear-gradient(135deg, var(--gold) 0%, #a8781f 100%);
+    color: #000;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 100px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 40px rgba(201,168,76,0.3), 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .btn-connect::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -60%;
+    width: 40%; height: 200%;
+    background: rgba(255,255,255,0.2);
+    transform: skewX(-20deg);
+    transition: left 0.5s ease;
+  }
+  .btn-connect:hover::before { left: 130%; }
+  .btn-connect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 60px rgba(201,168,76,0.4), 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .btn-connect:active { transform: scale(0.97); }
+  .btn-icon {
+    width: 20px; height: 20px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    margin-top: 56px;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .stat-divider {
+    width: 1px;
+    background: var(--border);
+  }
+
+  /* Floating expert cards */
+  .floating-cards {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .fcard {
+    position: absolute;
+    background: rgba(13,21,38,0.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    animation: float linear infinite;
+    opacity: 0;
+  }
+  .fcard:nth-child(1) { top: 22%; left: 5%; animation-duration: 8s; animation-delay: 0s; }
+  .fcard:nth-child(2) { top: 60%; left: 3%; animation-duration: 10s; animation-delay: 2s; }
+  .fcard:nth-child(3) { top: 25%; right: 4%; animation-duration: 9s; animation-delay: 1s; }
+  .fcard:nth-child(4) { top: 65%; right: 5%; animation-duration: 11s; animation-delay: 3s; }
+  @keyframes float {
+    0% { opacity: 0; transform: translateY(0px); }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-20px); }
+  }
+  .fcard-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .fcard-info .name { font-weight: 600; color: var(--text); font-size: 13px; }
+  .fcard-info .tag { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .fcard-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.04em;
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-gold { background: var(--gold-dim); color: var(--gold-light); }
+
+  /* ──────────────────────────────────────
+     CONNECTING SCREEN
+  ────────────────────────────────────── */
+  #connecting {
+    justify-content: center;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .conn-orb {
+    position: relative;
+    width: 120px; height: 120px;
+  }
+  .orb-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    animation: spin linear infinite;
+  }
+  .orb-ring:nth-child(1) {
+    border-top-color: var(--gold);
+    animation-duration: 1.2s;
+  }
+  .orb-ring:nth-child(2) {
+    inset: 10px;
+    border-right-color: rgba(201,168,76,0.4);
+    animation-duration: 1.8s;
+    animation-direction: reverse;
+  }
+  .orb-ring:nth-child(3) {
+    inset: 22px;
+    border-bottom-color: rgba(201,168,76,0.2);
+    animation-duration: 2.5s;
+  }
+  .orb-core {
+    position: absolute;
+    inset: 36px;
+    background: var(--gold-dim);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    animation: pulse-core 1.5s ease infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse-core {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  .conn-text {
+    text-align: center;
+  }
+  .conn-text h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .conn-text p {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .conn-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 280px;
+  }
+  .conn-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-dim);
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    transition: all 0.4s ease;
+  }
+  .conn-step.done {
+    color: var(--green);
+    border-color: rgba(0,216,138,0.2);
+    background: var(--green-dim);
+  }
+  .conn-step.active {
+    color: var(--gold-light);
+    border-color: rgba(201,168,76,0.2);
+    background: var(--gold-dim);
+  }
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* ──────────────────────────────────────
+     CHAT SCREEN
+  ────────────────────────────────────── */
+  #chatScreen {
+    display: none;
+    flex-direction: column;
+  }
+  #chatScreen.active { display: flex; }
+
+  /* Chat Header */
+  .chat-header {
+    padding: 14px 20px;
+    background: rgba(13,21,38,0.95);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    z-index: 5;
+    flex-shrink: 0;
+  }
+  .back-btn {
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .back-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+  .expert-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .expert-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 1px; right: 1px;
+    width: 10px; height: 10px;
+    background: var(--green);
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+  }
+
+  .expert-meta { flex: 1; }
+  .expert-meta .expert-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .expert-meta .expert-sub {
+    font-size: 11px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  .header-tags {
+    display: flex;
+    gap: 6px;
+  }
+  .htag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.04em;
+    background: var(--gold-dim);
+    color: var(--gold-light);
+    border: 1px solid rgba(201,168,76,0.15);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* Chat area */
+  .chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-dim) transparent;
+  }
+  .chat-body::-webkit-scrollbar { width: 4px; }
+  .chat-body::-webkit-scrollbar-track { background: transparent; }
+  .chat-body::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 4px; }
+
+  /* Date divider */
+  .date-divider {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .date-divider::before, .date-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Messages */
+  .msg-row {
+    display: flex;
+    gap: 10px;
+    animation: msgIn 0.3s ease both;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .msg-av {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+
+  .bubble-wrap { display: flex; flex-direction: column; gap: 4px; max-width: 72%; }
+  .msg-row.user .bubble-wrap { align-items: flex-end; }
+
+  .bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    position: relative;
+    word-break: break-word;
+  }
+  .msg-row.bot .bubble {
+    background: var(--expert-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+  .msg-row.user .bubble {
+    background: var(--user-bubble);
+    border: 1px solid rgba(37,99,235,0.3);
+    border-bottom-right-radius: 4px;
+    color: var(--text);
+  }
+
+  .bubble-time {
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 0 4px;
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--expert-bubble);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+  }
+  .typing-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: typingBounce 1.2s ease infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* Market insight card in chat */
+  .insight-card {
+    background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.15);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  .insight-card .ic-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .insight-card .ic-ticker { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .ic-sym { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--text); font-size: 13px; }
+  .ic-chg { font-family: 'DM Mono', monospace; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+  .ic-chg.up { color: var(--green); background: var(--green-dim); }
+  .ic-chg.dn { color: var(--red); background: rgba(255,77,109,0.1); }
+
+  /* Suggestion chips */
+  .suggestions {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 12px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .suggestions::-webkit-scrollbar { display: none; }
+  .chip {
+    white-space: nowrap;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .chip:hover {
+    background: var(--gold-dim);
+    border-color: rgba(201,168,76,0.25);
+    color: var(--gold-light);
+  }
+
+  /* Input */
+  .chat-input-wrap {
+    padding: 12px 16px;
+    background: rgba(13,21,38,0.95);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .chat-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 12px 18px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input::placeholder { color: var(--text-dim); }
+  .chat-input:focus { border-color: rgba(201,168,76,0.3); }
+
+  .send-btn {
+    width: 42px; height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold) 0%, #a8781f 100%);
+    color: #000;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(201,168,76,0.3);
+  }
+  .send-btn:hover { transform: scale(1.07); box-shadow: 0 6px 20px rgba(201,168,76,0.4); }
+  .send-btn:active { transform: scale(0.95); }
+
+  /* ─── MODAL OVERLAY ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 340px;
+    width: 90%;
+    text-align: center;
+    transform: translateY(20px);
+    transition: transform 0.3s;
+  }
+  .modal-overlay.visible .modal-card { transform: translateY(0); }
+  .modal-card h3 { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 10px; }
+  .modal-card p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .modal-btn {
+    padding: 12px 28px;
+    border-radius: 100px;
+    border: none;
+    background: linear-gradient(135deg, var(--gold), #a8781f);
+    color: #000;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .stats-bar { gap: 20px; }
+    .stat-num { font-size: 22px; }
+    .header-tags { display: none; }
+    .fcard:nth-child(n) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── TICKER TAPE ── -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<!-- ── FLOATING CARDS ── -->
+<div class="floating-cards">
+  <div class="fcard">
+    <div class="fcard-avatar" style="background:rgba(201,168,76,0.15);color:var(--gold)">RV</div>
+    <div class="fcard-info">
+      <div class="name">Rahul Verma</div>
+      <div class="tag">Equity Analyst · 9 yrs</div>
+    </div>
+    <div class="fcard-badge badge-green">ONLINE</div>
+  </div>
+  <div class="fcard">
+    <div class="fcard-avatar" style="background:rgba(37,99,235,0.15);color:#60a5fa">PK</div>
+    <div class="fcard-info">
+      <div class="name">Priya Kapoor</div>
+      <div class="tag">Derivatives · 7 yrs</div>
+    </div>
+    <div class="fcard-badge badge-gold">BUSY</div>
+  </div>
+  <div class="fcard">
+    <div class="fcard-avatar" style="background:rgba(0,216,138,0.1);color:var(--green)">AS</div>
+    <div class="fcard-info">
+      <div class="name">Amit Shah</div>
+      <div class="tag">F&O Specialist · 12 yrs</div>
+    </div>
+    <div class="fcard-badge badge-green">ONLINE</div>
+  </div>
+  <div class="fcard">
+    <div class="fcard-avatar" style="background:rgba(168,85,247,0.1);color:#a78bfa">NS</div>
+    <div class="fcard-info">
+      <div class="name">Neha Singh</div>
+      <div class="tag">Mutual Funds · 5 yrs</div>
+    </div>
+    <div class="fcard-badge badge-green">ONLINE</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     HOME SCREEN
+══════════════════════════════ -->
+<div id="home" class="screen active home">
+  <nav class="nav">
+    <div class="nav-logo">Trade<span>Zone</span></div>
+    <div class="nav-pill">
+      <div class="live-dot"></div>
+      <span>24 experts online</span>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-badge">
+      <span>⭐</span>
+      <span>India's #1 Expert Trading Network</span>
+    </div>
+    <h1>Markets Move Fast.<br>So Should You.</h1>
+    <p>Get instant access to SEBI-registered market experts. Real insights, real time — before the opportunity disappears.</p>
+    <button class="btn-connect" onclick="startConnect()">
+      <div class="btn-icon">▶</div>
+      Connect with an Expert
+    </button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-num">2.4K+</div>
+      <div class="stat-label">Experts</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">98%</div>
+      <div class="stat-label">Satisfaction</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">&lt;30s</div>
+      <div class="stat-label">Avg Connect</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">₹0</div>
+      <div class="stat-label">First Call Free</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     CONNECTING SCREEN
+══════════════════════════════ -->
+<div id="connecting" class="screen">
+  <div class="conn-orb">
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb-core">📡</div>
+  </div>
+
+  <div class="conn-text">
+    <h2>Finding Your Expert</h2>
+    <p>Matching you with the best available advisor</p>
+  </div>
+
+  <div class="conn-steps">
+    <div class="conn-step" id="step1">
+      <div class="step-dot"></div>
+      <span>Scanning available experts…</span>
+    </div>
+    <div class="conn-step" id="step2">
+      <div class="step-dot"></div>
+      <span>Checking credentials…</span>
+    </div>
+    <div class="conn-step" id="step3">
+      <div class="step-dot"></div>
+      <span>Establishing secure channel…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     CHAT SCREEN
+══════════════════════════════ -->
+<div id="chatScreen" class="screen">
+
+  <div class="chat-header">
+    <div class="back-btn" onclick="goHome()">←</div>
+    <div class="expert-avatar" id="expertAvatar"></div>
+    <div class="expert-meta">
+      <div class="expert-name" id="expertName"></div>
+      <div class="expert-sub">
+        <div class="live-dot" style="width:6px;height:6px"></div>
+        <span>Online · Typically replies instantly</span>
+      </div>
+    </div>
+    <div class="header-tags">
+      <div class="htag" id="expertBadge"></div>
+    </div>
+  </div>
+
+  <div class="chat-body" id="chatBody">
+    <div class="date-divider">Today</div>
+  </div>
+
+  <div class="suggestions" id="suggestions">
+    <div class="chip" onclick="sendChip(this)">📈 Best stocks to buy now?</div>
+    <div class="chip" onclick="sendChip(this)">🛡️ How to hedge my portfolio?</div>
+    <div class="chip" onclick="sendChip(this)">📊 Nifty outlook this week</div>
+    <div class="chip" onclick="sendChip(this)">💰 Best SIP options?</div>
+    <div class="chip" onclick="sendChip(this)">⚠️ Stop-loss strategy</div>
+  </div>
+
+  <div class="chat-input-wrap">
+    <input class="chat-input" id="msgInput" placeholder="Ask about stocks, F&O, mutual funds…" onkeydown="if(event.key==='Enter') sendMsg()">
+    <button class="send-btn" onclick="sendMsg()">➤</button>
+  </div>
+</div>
+
+<!-- Session end modal -->
+<div class="modal-overlay" id="endModal">
+  <div class="modal-card">
+    <div style="font-size:40px;margin-bottom:16px">👋</div>
+    <h3>Session Ended</h3>
+    <p>Thank you for using TradeZone. Your expert session has been saved. Happy investing!</p>
+    <button class="modal-btn" onclick="closeModal()">Back to Home</button>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────
+const experts = [
+  { name: "Rahul Verma",  initials: "RV", color: "#c9a84c", bg: "rgba(201,168,76,0.15)",   spec: "Equity Analyst",      exp: "9 yrs",  badge: "⭐ SEBI Reg." },
+  { name: "Priya Kapoor", initials: "PK", color: "#60a5fa", bg: "rgba(37,99,235,0.15)",    spec: "Derivatives Expert",  exp: "7 yrs",  badge: "🔒 Verified" },
+  { name: "Amit Shah",    initials: "AS", color: "#00d88a", bg: "rgba(0,216,138,0.1)",     spec: "F&O Specialist",      exp: "12 yrs", badge: "🏆 Top Rated" },
+  { name: "Neha Singh",   initials: "NS", color: "#a78bfa", bg: "rgba(168,85,247,0.1)",    spec: "Mutual Fund Advisor", exp: "5 yrs",  badge: "✅ Certified" },
+  { name: "Vikram Nair",  initials: "VN", color: "#f97316", bg: "rgba(249,115,22,0.1)",    spec: "Swing Trader",        exp: "10 yrs", badge: "📈 Profitable" },
+  { name: "Sonal Mehta",  initials: "SM", color: "#ec4899", bg: "rgba(236,72,153,0.1)",    spec: "Macro Analyst",       exp: "8 yrs",  badge: "🌐 Macro Expert" },
+];
+
+const replies = [
+  { text: "This stock shows strong fundamentals and upward momentum. The RSI is not yet overbought — this is a good accumulation zone for medium-term investors.", ticker: { sym: "RELIANCE", price: "2,847", chg: "+1.4%", up: true } },
+  { text: "I'd wait for a confirmed breakout above the resistance level before entering. Setting up a buy-stop order just above ₹1,240 would be smart risk management.", ticker: null },
+  { text: "Current market conditions show elevated volatility. I recommend keeping 20-25% in cash to take advantage of dips. Avoid heavy leveraged positions right now.", ticker: { sym: "NIFTY50", price: "24,180", chg: "-0.6%", up: false } },
+  { text: "Portfolio diversification is key. Aim for a mix of large-cap defensive stocks, mid-cap growth, and 10-15% in gold ETFs. This cushions against any sector-specific shocks.", ticker: null },
+  { text: "Always place a stop-loss 7-8% below your entry. Never risk more than 2% of your total capital in a single trade — that's the golden rule of position sizing.", ticker: null },
+  { text: "Midcap IT is looking attractive after the recent correction. TCS and Infosys are safer bets, but LTIM and Persistent are showing better growth momentum for 2024.", ticker: { sym: "LTIM", price: "5,430", chg: "+2.1%", up: true } },
+  { text: "For SIP investments, I recommend HDFC Flexicap or Parag Parikh Flexi Cap — both have delivered 14-18% CAGR over 5 years with controlled volatility.", ticker: null },
+  { text: "The Banking Nifty looks range-bound between 50,800 and 51,400. A covered call strategy could generate 1.5-2% monthly return while you wait for the breakout.", ticker: { sym: "BANKNIFTY", price: "51,040", chg: "+0.3%", up: true } },
+  { text: "Smallcap sector is seeing smart money outflows. Stick to quality names with debt-free balance sheets. Avoid penny stocks regardless of tips you receive.", ticker: null },
+  { text: "Pharma and FMCG are your defensive plays right now. These sectors tend to outperform in a risk-off environment. Dr. Reddy's and ITC look particularly interesting.", ticker: { sym: "DRREDDY", price: "6,890", chg: "+0.9%", up: true } },
+];
+
+const greetings = [
+  "Hello! I'm {name}, your dedicated market expert. How can I help you navigate today's markets?",
+  "Welcome to TradeZone! I'm {name}. The markets are {mood} today — let's make the most of it. What's on your mind?",
+  "Hi there! {name} here, {spec} with {exp} of experience. Ready to decode the markets for you! 📊",
+];
+
+const moodWords = ["cautiously bullish", "showing volatility", "in consolidation", "recovering strongly"];
+
+const tickerData = [
+  { sym: "NIFTY", price: "24,180.50", chg: "+0.42%", up: true },
+  { sym: "SENSEX", price: "79,802.30", chg: "+0.38%", up: true },
+  { sym: "RELIANCE", price: "2,847.60", chg: "+1.23%", up: true },
+  { sym: "TCS", price: "4,126.45", chg: "-0.56%", up: false },
+  { sym: "HDFC", price: "1,742.80", chg: "+0.91%", up: true },
+  { sym: "INFY", price: "1,834.20", chg: "-0.34%", up: false },
+  { sym: "ICICIBANK", price: "1,234.75", chg: "+1.05%", up: true },
+  { sym: "TATASTEEL", price: "168.30", chg: "+2.10%", up: true },
+  { sym: "WIPRO", price: "492.60", chg: "-0.78%", up: false },
+  { sym: "BHARTIARTL", price: "1,570.40", chg: "+0.65%", up: true },
+  { sym: "SBIN", price: "821.50", chg: "+0.33%", up: true },
+  { sym: "HCLTECH", price: "1,780.90", chg: "-0.22%", up: false },
+  { sym: "BAJFINANCE", price: "6,945.20", chg: "+1.70%", up: true },
+  { sym: "MARUTI", price: "12,350.00", chg: "+0.89%", up: true },
+];
+
+// ── STATE ──
+let currentExpert = null;
+
+// ── INIT TICKER ──
+function initTicker() {
+  const track = document.getElementById('tickerTrack');
+  const doubled = [...tickerData, ...tickerData];
+  track.innerHTML = doubled.map(t =>
+    `<div class="ticker-item">
+      <span class="sym">${t.sym}</span>
+      <span class="price">₹${t.price}</span>
+      <span class="chg ${t.up ? 'up' : 'dn'}">${t.up ? '▲' : '▼'} ${t.chg}</span>
+    </div>`
+  ).join('');
+}
+
+// ── SHOW SCREEN ──
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── TIME HELPER ──
+function now() {
+  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── START CONNECT ──
+function startConnect() {
+  show('connecting');
+  const steps = ['step1','step2','step3'];
+  let i = 0;
+  steps.forEach(s => {
+    document.getElementById(s).className = 'conn-step';
+  });
+
+  const interval = setInterval(() => {
+    if (i > 0) document.getElementById(steps[i-1]).className = 'conn-step done';
+    if (i < steps.length) {
+      document.getElementById(steps[i]).className = 'conn-step active';
+      i++;
+    }
+  }, 600);
+
+  setTimeout(() => {
+    clearInterval(interval);
+    steps.forEach(s => document.getElementById(s).className = 'conn-step done');
+    currentExpert = experts[Math.floor(Math.random() * experts.length)];
+    setupChat();
+    show('chatScreen');
+    sendGreeting();
+  }, 2400);
+}
+
+// ── SETUP CHAT ──
+function setupChat() {
+  const e = currentExpert;
+  const av = document.getElementById('expertAvatar');
+  av.textContent = e.initials;
+  av.style.background = e.bg;
+  av.style.color = e.color;
+  document.getElementById('expertName').textContent = e.name + ' · ' + e.spec;
+  document.getElementById('expertBadge').textContent = e.badge;
+  document.getElementById('chatBody').innerHTML = '<div class="date-divider">Today</div>';
+}
+
+// ── SEND GREETING ──
+function sendGreeting() {
+  const e = currentExpert;
+  const template = greetings[Math.floor(Math.random() * greetings.length)];
+  const mood = moodWords[Math.floor(Math.random() * moodWords.length)];
+  const text = template
+    .replace('{name}', e.name.split(' ')[0])
+    .replace('{mood}', mood)
+    .replace('{spec}', e.spec)
+    .replace('{exp}', e.exp);
+  setTimeout(() => addBotMsg(text, null), 400);
+}
+
+// ── ADD MESSAGES ──
+function addBotMsg(text, ticker) {
+  const chatBody = document.getElementById('chatBody');
+  const e = currentExpert;
+
+  // Typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'msg-row bot';
+  typing.id = 'typing';
+  typing.innerHTML = `
+    <div class="msg-av" style="background:${e.bg};color:${e.color}">${e.initials}</div>
+    <div class="bubble-wrap">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>`;
+  chatBody.appendChild(typing);
+  chatBody.scrollTop = chatBody.scrollHeight;
+
+  setTimeout(() => {
+    typing.remove();
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+
+    let insightHTML = '';
+    if (ticker) {
+      insightHTML = `
+        <div class="insight-card">
+          <div class="ic-label">📊 Live Snapshot</div>
+          <div class="ic-ticker">
+            <span class="ic-sym">${ticker.sym}</span>
+            <span>₹${ticker.price}</span>
+            <span class="ic-chg ${ticker.up ? 'up' : 'dn'}">${ticker.up ? '▲' : '▼'} ${ticker.chg}</span>
+          </div>
+        </div>`;
+    }
+
+    row.innerHTML = `
+      <div class="msg-av" style="background:${e.bg};color:${e.color}">${e.initials}</div>
+      <div class="bubble-wrap">
+        <div class="bubble">${text}${insightHTML}</div>
+        <div class="bubble-time">${now()}</div>
+      </div>`;
+    chatBody.appendChild(row);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }, 900 + Math.random() * 600);
+}
+
+function addUserMsg(text) {
+  const chatBody = document.getElementById('chatBody');
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `
+    <div class="bubble-wrap">
+      <div class="bubble">${text}</div>
+      <div class="bubble-time">${now()} · Sent</div>
+    </div>
+    <div class="msg-av" style="background:var(--user-bubble);color:#93c5fd">You</div>`;
+  chatBody.appendChild(row);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+// ── SEND ──
+function sendMsg() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addUserMsg(text);
+  const reply = replies[Math.floor(Math.random() * replies.length)];
+  addBotMsg(reply.text, reply.ticker);
+}
+
+function sendChip(el) {
+  const text = el.textContent.replace(/^[^\w₹]*/, '').trim();
+  addUserMsg(text);
+  const reply = replies[Math.floor(Math.random() * replies.length)];
+  addBotMsg(reply.text, reply.ticker);
+  document.getElementById('suggestions').style.display = 'none';
+}
+
+// ── GO HOME ──
+function goHome() {
+  document.getElementById('endModal').classList.add('visible');
+}
+function closeModal() {
+  document.getElementById('endModal').classList.remove('visible');
+  show('home');
+}
+
+// ── INIT ──
+initTicker();
+</script>
+</body>
+  </html>
